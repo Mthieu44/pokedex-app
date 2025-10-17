@@ -11,13 +11,30 @@ class PokemonTypeBubbleWidget extends StatelessWidget {
 
   final PokemonType type;
 
+  double getBubbleWidth() {
+    const textStyle = TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.normal,
+    );
+
+    final textPainter = TextPainter(
+      text: TextSpan(text: "ELECTRIC", style: textStyle),
+      maxLines: 1,
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    // Largeur du texte + marge pour icône (20) +
+    return textPainter.width + 20 + 4;
+  }
+
   @override
   Widget build(BuildContext context) {
 
     final palette = TypeColors.getPalette(type.name);
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 2, vertical: 0),
+      padding: EdgeInsets.only(right: 4),
+      width: getBubbleWidth(),
       decoration: BoxDecoration(
         color: palette.primary,
         borderRadius: BorderRadius.circular(120)
@@ -38,7 +55,7 @@ class PokemonTypeBubbleWidget extends StatelessWidget {
                   fontSize: 12,
                 )
               )
-            )
+            ),
           )
         ],
       )

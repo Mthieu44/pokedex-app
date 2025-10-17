@@ -1,53 +1,92 @@
 import 'package:flutter/material.dart';
+import 'package:pokedex_app/data/models/pokemon_species.model.dart';
+import 'package:pokedex_app/data/providers/pokemon.provider.dart';
+import 'package:pokedex_app/ui/modals/types_filter.dialog.dart';
+import 'package:pokedex_app/ui/widgets/action_menu.widget.dart';
 import 'package:pokedex_app/ui/widgets/pokemon_card.widget.dart';
-import 'package:pokedex_app/ui/widgets/pokemon_type_bubble.widget.dart';
-import '../../data/models/pokemon.model.dart';
+import 'package:flutter_speed_dial/flutter_speed_dial.dart';
+import 'package:provider/provider.dart';
+
+import '../../data/api/pokemon.service.dart';
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+  const MyHomePage({super.key});
 
-  final String title;
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    final provider = Provider.of<PokemonProvider>(context, listen: false);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      provider.loadInitial();
+    });
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >=
+          _scrollController.position.maxScrollExtent - 300 &&
+          !provider.isLoading &&
+          provider.hasMore) {
+        provider.loadMore();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      floatingActionButton: ActionMenuWidget(),
       appBar: AppBar(
-        title: Text(widget.title),
+        title: Text(""),
       ),
-      body: Center(
-        child: GridView.count(
-          crossAxisCount: 2,
-          mainAxisSpacing: 6,
-          crossAxisSpacing: 6,
-          childAspectRatio: 1.4,
-          padding: EdgeInsets.all(3),
-          children: [
-            PokemonCard(pokemon: Pokemon.mock("fire")),
-            PokemonCard(pokemon: Pokemon.mock("water")),
-            PokemonCard(pokemon: Pokemon.mock("grass")),
-            PokemonCard(pokemon: Pokemon.mock("electric")),
-            PokemonCard(pokemon: Pokemon.mock("psychic")),
-            PokemonCard(pokemon: Pokemon.mock("ice")),
-            PokemonCard(pokemon: Pokemon.mock("dragon")),
-            PokemonCard(pokemon: Pokemon.mock("fairy")),
-            PokemonCard(pokemon: Pokemon.mock("rock")),
-            PokemonCard(pokemon: Pokemon.mock("ground")),
-            PokemonCard(pokemon: Pokemon.mock("flying")),
-            PokemonCard(pokemon: Pokemon.mock("bug")),
-            PokemonCard(pokemon: Pokemon.mock("ghost")),
-            PokemonCard(pokemon: Pokemon.mock("dark")),
-            PokemonCard(pokemon: Pokemon.mock("steel")),
-            PokemonCard(pokemon: Pokemon.mock("normal")),
-            PokemonCard(pokemon: Pokemon.mock("fighting")),
-            PokemonCard(pokemon: Pokemon.mock("poison")),
-          ]
-        ),
-      ),
+      body: Consumer<PokemonProvider>(
+        builder: (context, provider, child) {
+          if (provider.isLoading && provider.speciesList.isEmpty) {
+            return Center(child: CircularProgressIndicator());
+          } else if (provider.speciesList.isEmpty) {
+            return Center(child: Text("No Pokémon found."));
+          }
+
+          final speciesList = provider.speciesList;
+
+          return RefreshIndicator(
+            onRefresh: () async {
+              await provider.loadInitial();
+            },
+            child: GridView.builder(
+              controller: _scrollController,
+              padding: EdgeInsets.all(3),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 6,
+                mainAxisSpacing: 6,
+                childAspectRatio: 1.4,
+              ),
+              itemCount: speciesList.length + (provider.hasMore ? 1 : 0),
+              itemBuilder: (context, index) {
+                if (index < speciesList.length) {
+                  final species = speciesList[index];
+                  return PokemonCard(pokemonSpecies: species);
+                } else {
+                  return Center(child: CircularProgressIndicator());
+                }
+              },
+            )
+          );
+        },
+      )
     );
   }
 }

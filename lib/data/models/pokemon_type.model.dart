@@ -30,6 +30,8 @@ enum PokemonType {
       orElse: () => PokemonType.normal,
     );
   }
+
+
 }
 
 const Map<PokemonType, List<PokemonType>> typeWeaknesses = {
