@@ -7,73 +7,103 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/pokemon_form.model.dart';
 
 class PokemonService {
+  PokemonService._privateConstructor();
+  static final PokemonService instance = PokemonService._privateConstructor();
+
   final String baseUrl = 'https://pokeapi.co/api/v2';
   final http.Client client = http.Client();
+
+  Future<Map<String, dynamic>> getDataCached(String key, String url) async {
+    final prefs = await SharedPreferences.getInstance();
+    final cachedData = prefs.getString(key);
+    Map<String, dynamic> json;
+
+    if (cachedData != null) {
+      json = jsonDecode(cachedData);
+    } else {
+      final response = await client.get(
+        Uri.parse(url),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to load data from $url');
+      }
+
+      json = jsonDecode(response.body);
+      await prefs.setString(key, response.body);
+    }
+    return json;
+  }
+
+  Future<PokemonSpecies> fetchSpeciesAndDefaultVariant(int id) async {
+    final speciesJson = await getDataCached('pokemon_species_$id', '$baseUrl/pokemon-species/$id');
+    final species = PokemonSpecies.fromJson(speciesJson);
+
+    final defaultVariant = speciesJson['varieties']
+        .firstWhere((v) => v['is_default'] == true);
+    final variantUrl = defaultVariant['pokemon']['url'];
+
+    final pokemonJson = await getDataCached('pokemon_$id', variantUrl);
+    final pokemon = Pokemon.fromJson(pokemonJson, species);
+
+    final defaultForm = pokemonJson['forms'][0];
+    final formUrl = defaultForm['url'];
+    final formId = int.parse(formUrl.split('/')[6]);
+
+    final formJson = await getDataCached('pokemon_form_$formId', formUrl);
+    final form = PokemonForm.fromJson(formJson, pokemon);
+
+    pokemon.forms.add(form);
+    species.variants.add(pokemon);
+
+    return species;
+  }
 
   Future<List<PokemonSpecies>> fetchAllPokemonSpecies({int offset=0, int limit=20}) async {
     final response = await client.get(
       Uri.parse('$baseUrl/pokemon-species?offset=$offset&limit=$limit'),
     );
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      List<PokemonSpecies> speciesList = [];
-      final prefs = await SharedPreferences.getInstance();
+    if (response.statusCode != 200) {
+      throw Exception('Failed to load Pokémon species list');
+    }
+    
+    final data = jsonDecode(response.body);
+    final results = data['results'] as List<dynamic>;
 
-      for (var item in data['results']) {
-        final speciesUrl = item['url'];
-        final id = int.parse(speciesUrl.split('/')[6]);
-        try {
-          final cachedSpecies = prefs.getString('pokemon_species_$id');
-          Map<String, dynamic> speciesJson;
-          if (cachedSpecies != null) {
-            speciesJson = jsonDecode(cachedSpecies);
-          } else {
-            final speciesResponse = await client.get(
-              Uri.parse(speciesUrl),
-            );
-            if (speciesResponse.statusCode != 200) {
-              print('Failed to load species with id $id');
-              continue;
-            }
-            speciesJson = jsonDecode(speciesResponse.body);
-            await prefs.setString('pokemon_species_$id', speciesResponse.body);
-          }
+    final futures = results.map((speciesInfo) async {
+      final speciesUrl = speciesInfo['url'];
+      final speciesId = int.parse(speciesUrl.split('/')[6]);
+      return await fetchSpeciesAndDefaultVariant(speciesId);
+    }).toList();
 
-          final species = PokemonSpecies.fromJson(speciesJson);
+    final speciesList = await Future.wait(futures);
+    return speciesList;
+  }
 
-          final defaultVariant = speciesJson['varieties']
-              .firstWhere((v) => v['is_default'] == true);
+  Future<void> fetchAllFormsForPokemon(Pokemon pokemon) async {
 
-          final variantUrl = defaultVariant['pokemon']['url'];
-          final cachedPokemon = prefs.getString('pokemon_${species.id}');
-          Map<String, dynamic> pokemonJson;
+    final pokemonJson = await getDataCached('pokemon_${pokemon.id}', '$baseUrl/pokemon/${pokemon.id}');
 
-          if (cachedPokemon != null) {
-            pokemonJson = jsonDecode(cachedPokemon);
-          } else {
-            final pokemonResponse = await client.get(
-              Uri.parse(variantUrl),
-            );
-            if (pokemonResponse.statusCode != 200) {
-              print('Failed to load pokemon for species id $id');
-              continue;
-            }
-            pokemonJson = jsonDecode(pokemonResponse.body);
-            await prefs.setString('pokemon_${species.id}', pokemonResponse.body);
-          }
+    final formsData = pokemonJson['forms'] as List<dynamic>;
 
-          final pokemon = Pokemon.fromJson(pokemonJson, species);
-          species.variants.add(pokemon);
-          speciesList.add(species);
-        } catch (e) {
-          print('Error fetching species with id $id: $e');
-          continue;
-        }
-      }
-      return speciesList;
-    } else {
-      throw Exception('Failed to load Pokémon species');
+    pokemon.forms.clear();
+
+    final defaultFormData = formsData[0];
+    final formUrl = defaultFormData['url'];
+    final formId = int.parse(formUrl.split('/')[6]);
+    final formJson = await getDataCached('pokemon_form_$formId', formUrl);
+    final defaultForm = PokemonForm.fromJson(formJson, pokemon);
+    pokemon.forms.add(defaultForm);
+
+
+    for (int i = 1; i < formsData.length; i++) {
+      final formData = formsData[i];
+      final formUrl = formData['url'];
+      final formId = int.parse(formUrl.split('/')[6]);
+      final formJson = await getDataCached('pokemon_form_$formId', formUrl);
+      final form = PokemonForm.fromJson(formJson, pokemon, defaultForm: defaultForm);
+      pokemon.forms.add(form);
     }
   }
 }

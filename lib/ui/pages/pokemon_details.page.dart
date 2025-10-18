@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pokedex_app/data/api/pokemon.service.dart';
 import 'package:pokedex_app/data/models/pokemon.model.dart';
 import 'package:pokedex_app/data/models/pokemon_form.model.dart';
 import 'package:pokedex_app/data/models/pokemon_image.model.dart';
@@ -27,7 +28,7 @@ class PokemonDetailsPage extends StatefulWidget {
 }
 
 class _PokemonDetailsPageState extends State<PokemonDetailsPage> {
-
+  PokemonService pokemonService = PokemonService.instance;
   bool isShiny = false;
   bool isFavorite = false;
   PokemonImageType imageType = PokemonImageType.animatedSprite3D;
@@ -36,17 +37,25 @@ class _PokemonDetailsPageState extends State<PokemonDetailsPage> {
   Pokemon get currentVariant => widget.pokemonSpecies.variants[currentVariantIndex];
   PokemonForm get currentForm => currentVariant.forms[currentFormIndex];
 
+  Future<void> _fetchForms() async {
+    await pokemonService.fetchAllFormsForPokemon(currentVariant);
+    if (!mounted) return;
+    setState(() {});
+  }
+
   @override
   void initState() {
     super.initState();
     currentVariantIndex = widget.initialVariantIndex;
     currentFormIndex = widget.initialFormIndex;
+    _fetchForms();
   }
   void _setVariant(int index) {
     setState(() {
       currentVariantIndex = index;
       currentFormIndex = 0;
     });
+    _fetchForms();
   }
 
   String _lastSwipeDirection = "";
@@ -74,7 +83,7 @@ class _PokemonDetailsPageState extends State<PokemonDetailsPage> {
       backgroundColor: palette.secondary,
       body: CustomScrollView(
         physics: BouncingScrollPhysics(
-          parent: AlwaysScrollableScrollPhysics()
+          parent: AlwaysScrollableScrollPhysics(),
         ),
         slivers: [
           SliverAppBar(
@@ -90,7 +99,7 @@ class _PokemonDetailsPageState extends State<PokemonDetailsPage> {
             actions: [
               IconButton(
                 icon: Icon(
-                    isShiny ? Icons.star : Icons.star_border,
+                    isShiny ? Icons.auto_awesome : Icons.auto_awesome_outlined,
                     color: isShiny ? Colors.yellow : Colors.white
                 ),
                 onPressed: () => {
@@ -101,7 +110,7 @@ class _PokemonDetailsPageState extends State<PokemonDetailsPage> {
               ),
               IconButton(
                 icon: Icon(
-                    isFavorite ? Icons.favorite : Icons.favorite_border,
+                    isFavorite ? Icons.favorite : Icons.favorite_outline,
                     color: isFavorite ? Colors.red : Colors.white
                 ),
                 onPressed: () => {
@@ -135,40 +144,69 @@ class _PokemonDetailsPageState extends State<PokemonDetailsPage> {
                     ),
                   ),
                   padding: EdgeInsets.only(top: topPadding),
-                  child: AnimatedSwitcher(
-                    duration: Duration(milliseconds: 150),
-                    transitionBuilder: (Widget child, Animation<double> animation) {
-                      final inFromRight = Tween<Offset>(
-                        begin: Offset(1.0, 0.0),
-                        end: Offset(0.0, 0.0),
-                      ).animate(animation);
-                      final inFromLeft = Tween<Offset>(
-                        begin: Offset(-1.0, 0.0),
-                        end: Offset(0.0, 0.0),
-                      ).animate(animation);
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Center(
+                          child: AnimatedSwitcher(
+                            duration: Duration(milliseconds: 150),
+                            transitionBuilder: (Widget child, Animation<double> animation) {
+                              final inFromRight = Tween<Offset>(
+                                begin: Offset(1.0, 0.0),
+                                end: Offset(0.0, 0.0),
+                              ).animate(animation);
+                              final inFromLeft = Tween<Offset>(
+                                begin: Offset(-1.0, 0.0),
+                                end: Offset(0.0, 0.0),
+                              ).animate(animation);
 
-                      if (child.key == ValueKey(currentForm.id)) {
-                        return SlideTransition(
-                          position: _lastSwipeDirection == "next" ? inFromRight : inFromLeft,
-                          child: FadeTransition(opacity: animation, child: child),
-                        );
-                      } else {
-                        return SlideTransition(
-                          position: _lastSwipeDirection == "next" ? inFromLeft : inFromRight,
-                          child: FadeTransition(opacity: animation, child: child),
-                        );
-                      }
-                    },
-                    child: Hero(
-                      key: ValueKey(currentForm.id),
-                      tag: 'pokemon_image_${widget.pokemonSpecies.id}',
-                      child: PokemonImageBubble(
-                        pokemonImage: currentForm.images,
-                        size: 150,
-                        type: isShiny ? imageType.shiny : imageType,
-                        zoom: 1.3,
+                              if (child.key == ValueKey(currentForm.id)) {
+                                return SlideTransition(
+                                  position: _lastSwipeDirection == "next" ? inFromRight : inFromLeft,
+                                  child: FadeTransition(opacity: animation, child: child),
+                                );
+                              } else {
+                                return SlideTransition(
+                                  position: _lastSwipeDirection == "next" ? inFromLeft : inFromRight,
+                                  child: FadeTransition(opacity: animation, child: child),
+                                );
+                              }
+                            },
+                            child: Hero(
+                              key: ValueKey(currentForm.id),
+                              tag: 'pokemon_image_${widget.pokemonSpecies.id}',
+                              child: PokemonImageBubble(
+                                pokemonImage: currentForm.images,
+                                size: 150,
+                                type: isShiny ? imageType.shiny : imageType,
+                                zoom: 1.3,
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
+                      if (currentVariant.forms.length > 1) ...[
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: List.generate(
+                              currentVariant.forms.length,
+                              (index) => Container(
+                                margin: EdgeInsets.symmetric(horizontal: 2),
+                                width: 5,
+                                height: 5,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: index == currentFormIndex ? Colors.white : Colors.white54,
+                                ),
+                              )
+                            )
+                          )
+                        )
+                      ]
+                    ],
                   ),
                 ),
               ),
@@ -194,15 +232,19 @@ class _PokemonDetailsPageState extends State<PokemonDetailsPage> {
                         spacing: 4,
                         children: [
                           Text(
-                            currentVariant.name,
+                            (widget.pokemonSpecies.variants.length > 1 &&
+                              currentVariant.forms.length == 1 &&
+                              currentForm.formName != "") ?
+                              currentForm.displayFormName : currentVariant.name,
                             style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
+
                           if (currentVariant.forms.length > 1) ...[
                             Text(
-                              currentForm.formName,
+                              currentForm.displayFormName,
                               style: TextStyle(
                                 fontSize: 18,
                                 fontStyle: FontStyle.italic,
@@ -379,6 +421,12 @@ class _PokemonDetailsPageState extends State<PokemonDetailsPage> {
               ),
             ),
           ),
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: Container(
+              color: Colors.white,
+            ),
+          )
         ],
       ),
     );

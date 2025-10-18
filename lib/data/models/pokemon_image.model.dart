@@ -86,14 +86,29 @@ class PokemonImage {
     return PokemonImage(
       artwork: "$apiurl/other/official-artwork/$id.png", // toujours disponible sauf formes
       artworkShiny: "$apiurl/other/official-artwork/shiny/$id.png", // toujours disponible sauf formes
-      sprite2D: "$apiurl/$id.png", // toujours disponible
-      sprite2DShiny: "$apiurl/shiny/$id.png", // toujours disponible
-      sprite3D: "$apiurl/other/home/$id.png", // toujours disponible sauf formes
-      sprite3DShiny: "$apiurl/other/home/shiny/$id.png", // toujours disponible sauf formes
+      sprite2D: "$apiurl/$id.png", // toujours disponible // forme = /$id-<forme_name>.png
+      sprite2DShiny: "$apiurl/shiny/$id.png", // toujours disponible // forme = /shiny/$id-<forme_name>.png
+      sprite3D: "$apiurl/other/home/$id.png", // toujours disponible sauf formes // forme = /other/home/$id-<forme_name>.png
+      sprite3DShiny: "$apiurl/other/home/shiny/$id.png", // toujours disponible sauf formes // forme = /other/home/shiny/$id-<forme_name>.png
       animatedSprite2D: "$apiurl/versions/generation-v/black-white/animated/$id.gif",
       animatedSprite2DShiny: "$apiurl/versions/generation-v/black-white/animated/shiny/$id.gif",
-      animatedSprite3D: "$apiurl/other/showdown/$id.gif",
-      animatedSprite3DShiny: "$apiurl/other/showdown/shiny/$id.gif",
+      animatedSprite3D: "$apiurl/other/showdown/$id.gif", // forme = /other/showdown/$id-<forme_name>.gif
+      animatedSprite3DShiny: "$apiurl/other/showdown/shiny/$id.gif", // forme = /other/showdown/shiny/$id-<forme_name>.gif
+    );
+  }
+
+  factory PokemonImage.formFromDefaultForm(PokemonImage defaultFormImages, String formName) {
+    return PokemonImage(
+      artwork: null,
+      artworkShiny: null,
+      sprite2D: defaultFormImages.sprite2D.replaceFirst('.png', '-$formName.png'),
+      sprite2DShiny: defaultFormImages.sprite2DShiny.replaceFirst('.png', '-$formName.png'),
+      sprite3D: defaultFormImages.sprite3D?.replaceFirst('.png', '-$formName.png'),
+      sprite3DShiny: defaultFormImages.sprite3DShiny?.replaceFirst('.png', '-$formName.png'),
+      animatedSprite2D: defaultFormImages.animatedSprite2D?.replaceFirst('.gif', '-$formName.gif'),
+      animatedSprite2DShiny: defaultFormImages.animatedSprite2DShiny?.replaceFirst('.gif', '-$formName.gif'),
+      animatedSprite3D: defaultFormImages.animatedSprite3D?.replaceFirst('.gif', '-$formName.gif'),
+      animatedSprite3DShiny: defaultFormImages.animatedSprite3DShiny?.replaceFirst('.gif', '-$formName.gif'),
     );
   }
 

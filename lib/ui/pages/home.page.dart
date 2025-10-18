@@ -1,24 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:pokedex_app/data/models/pokemon_species.model.dart';
 import 'package:pokedex_app/data/providers/pokemon.provider.dart';
-import 'package:pokedex_app/ui/modals/types_filter.dialog.dart';
 import 'package:pokedex_app/ui/widgets/action_menu.widget.dart';
 import 'package:pokedex_app/ui/widgets/pokemon_card.widget.dart';
-import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:provider/provider.dart';
-
-import '../../data/api/pokemon.service.dart';
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
-
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+class _MyHomePageState extends State<MyHomePage> with AutomaticKeepAliveClientMixin{
   final ScrollController _scrollController = ScrollController();
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -28,12 +25,11 @@ class _MyHomePageState extends State<MyHomePage> {
       provider.loadInitial();
     });
     _scrollController.addListener(() {
-      if (_scrollController.position.pixels >=
-          _scrollController.position.maxScrollExtent - 300 &&
-          !provider.isLoading &&
-          provider.hasMore) {
-        provider.loadMore();
-      }
+      if (provider.hasMore &&
+          _scrollController.position.pixels >=
+          _scrollController.position.maxScrollExtent - 300) {
+            provider.loadMore();
+          }
     });
   }
 
@@ -46,11 +42,9 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return Scaffold(
       floatingActionButton: ActionMenuWidget(),
-      appBar: AppBar(
-        title: Text(""),
-      ),
       body: Consumer<PokemonProvider>(
         builder: (context, provider, child) {
           if (provider.isLoading && provider.speciesList.isEmpty) {
@@ -58,16 +52,26 @@ class _MyHomePageState extends State<MyHomePage> {
           } else if (provider.speciesList.isEmpty) {
             return Center(child: Text("No Pokémon found."));
           }
+          if (provider.hasError) {
+            return Center(
+              child: Text("An error occurred while loading Pokémon."),
+            );
+          }
 
           final speciesList = provider.speciesList;
 
           return RefreshIndicator(
             onRefresh: () async {
+              provider.reset();
               await provider.loadInitial();
             },
             child: GridView.builder(
               controller: _scrollController,
               padding: EdgeInsets.all(3),
+              physics: AlwaysScrollableScrollPhysics(),
+              addAutomaticKeepAlives: false,
+              addRepaintBoundaries: true,
+              addSemanticIndexes: false,
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 crossAxisSpacing: 6,
@@ -78,7 +82,10 @@ class _MyHomePageState extends State<MyHomePage> {
               itemBuilder: (context, index) {
                 if (index < speciesList.length) {
                   final species = speciesList[index];
-                  return PokemonCard(pokemonSpecies: species);
+                  return PokemonCard(
+                    key: ValueKey(species.id),
+                    pokemonSpecies: species
+                  );
                 } else {
                   return Center(child: CircularProgressIndicator());
                 }

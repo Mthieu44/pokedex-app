@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:pokedex_app/data/models/pokemon_form.model.dart';
 import 'package:pokedex_app/data/models/pokemon_image.model.dart';
 import 'package:pokedex_app/data/models/pokemon_species.model.dart';
