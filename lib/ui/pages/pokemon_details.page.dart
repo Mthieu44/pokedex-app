@@ -4,7 +4,6 @@ import 'package:pokedex_app/data/models/pokemon.model.dart';
 import 'package:pokedex_app/data/models/pokemon_form.model.dart';
 import 'package:pokedex_app/data/models/pokemon_image.model.dart';
 import 'package:pokedex_app/data/models/pokemon_species.model.dart';
-import 'package:pokedex_app/data/models/pokemon_type.model.dart';
 import 'package:pokedex_app/ui/theme/type_colors.theme.dart';
 import 'package:pokedex_app/ui/widgets/pokemon_image_bubble.widget.dart';
 import 'package:pokedex_app/ui/widgets/pokemon_stat.widget.dart';
@@ -37,6 +36,12 @@ class _PokemonDetailsPageState extends State<PokemonDetailsPage> {
   Pokemon get currentVariant => widget.pokemonSpecies.variants[currentVariantIndex];
   PokemonForm get currentForm => currentVariant.forms[currentFormIndex];
 
+  Future<void> _fetchVariants() async {
+    await pokemonService.fetchAllVariantsForSpecies(widget.pokemonSpecies);
+    if (!mounted) return;
+    setState(() {});
+  }
+
   Future<void> _fetchForms() async {
     await pokemonService.fetchAllFormsForPokemon(currentVariant);
     if (!mounted) return;
@@ -48,6 +53,7 @@ class _PokemonDetailsPageState extends State<PokemonDetailsPage> {
     super.initState();
     currentVariantIndex = widget.initialVariantIndex;
     currentFormIndex = widget.initialFormIndex;
+    _fetchVariants();
     _fetchForms();
   }
   void _setVariant(int index) {
@@ -235,7 +241,7 @@ class _PokemonDetailsPageState extends State<PokemonDetailsPage> {
                             (widget.pokemonSpecies.variants.length > 1 &&
                               currentVariant.forms.length == 1 &&
                               currentForm.formName != "") ?
-                              currentForm.displayFormName : currentVariant.name,
+                              currentForm.name : currentVariant.name,
                             style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,

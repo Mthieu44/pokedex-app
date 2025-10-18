@@ -46,14 +46,7 @@ class PokemonService {
     final pokemonJson = await getDataCached('pokemon_$id', variantUrl);
     final pokemon = Pokemon.fromJson(pokemonJson, species);
 
-    final defaultForm = pokemonJson['forms'][0];
-    final formUrl = defaultForm['url'];
-    final formId = int.parse(formUrl.split('/')[6]);
-
-    final formJson = await getDataCached('pokemon_form_$formId', formUrl);
-    final form = PokemonForm.fromJson(formJson, pokemon);
-
-    pokemon.forms.add(form);
+    await fetchDefaultFormForPokemon(pokemon);
     species.variants.add(pokemon);
 
     return species;
@@ -81,29 +74,55 @@ class PokemonService {
     return speciesList;
   }
 
-  Future<void> fetchAllFormsForPokemon(Pokemon pokemon) async {
-
+  Future<void> fetchDefaultFormForPokemon(Pokemon pokemon) async {
     final pokemonJson = await getDataCached('pokemon_${pokemon.id}', '$baseUrl/pokemon/${pokemon.id}');
-
     final formsData = pokemonJson['forms'] as List<dynamic>;
-
-    pokemon.forms.clear();
-
     final defaultFormData = formsData[0];
     final formUrl = defaultFormData['url'];
     final formId = int.parse(formUrl.split('/')[6]);
     final formJson = await getDataCached('pokemon_form_$formId', formUrl);
     final defaultForm = PokemonForm.fromJson(formJson, pokemon);
+    if (pokemon.forms.any((form) => form.id == defaultForm.id)) {
+      return;
+    }
     pokemon.forms.add(defaultForm);
+  }
 
+  Future<void> fetchAllFormsForPokemon(Pokemon pokemon) async {
+    final pokemonJson = await getDataCached('pokemon_${pokemon.id}', '$baseUrl/pokemon/${pokemon.id}');
+    final formsData = pokemonJson['forms'] as List<dynamic>;
+
+    if (pokemon.forms.isEmpty){
+      fetchDefaultFormForPokemon(pokemon);
+    }
 
     for (int i = 1; i < formsData.length; i++) {
       final formData = formsData[i];
       final formUrl = formData['url'];
       final formId = int.parse(formUrl.split('/')[6]);
+      if (pokemon.forms.any((form) => form.id == formId)) {
+        continue;
+      }
       final formJson = await getDataCached('pokemon_form_$formId', formUrl);
-      final form = PokemonForm.fromJson(formJson, pokemon, defaultForm: defaultForm);
+      final form = PokemonForm.fromJson(formJson, pokemon, defaultForm: pokemon.defaultForm);
       pokemon.forms.add(form);
+    }
+  }
+
+  Future<void> fetchAllVariantsForSpecies(PokemonSpecies species) async {
+    final speciesJson = await getDataCached('pokemon_species_${species.id}', '$baseUrl/pokemon-species/${species.id}');
+    final varieties = speciesJson['varieties'] as List<dynamic>;
+
+    for (var variety in varieties) {
+      final variantUrl = variety['pokemon']['url'];
+      final variantId = int.parse(variantUrl.split('/')[6]);
+      if (species.variants.any((v) => v.id == variantId)) {
+        continue;
+      }
+      final pokemonJson = await getDataCached('pokemon_$variantId', variantUrl);
+      final pokemon = Pokemon.fromJson(pokemonJson, species);
+      await fetchDefaultFormForPokemon(pokemon);
+      species.variants.add(pokemon);
     }
   }
 }

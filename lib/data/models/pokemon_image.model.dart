@@ -33,8 +33,8 @@ extension PokemonImageTypeShiny on PokemonImageType {
 class PokemonImage {
   final String? artwork;
   final String? artworkShiny;
-  final String sprite2D;
-  final String sprite2DShiny;
+  final String? sprite2D;
+  final String? sprite2DShiny;
   final String? sprite3D;
   final String? sprite3DShiny;
   final String? animatedSprite2D;
@@ -45,8 +45,8 @@ class PokemonImage {
   const PokemonImage({
     this.artwork,
     this.artworkShiny,
-    required this.sprite2D,
-    required this.sprite2DShiny,
+    this.sprite2D,
+    this.sprite2DShiny,
     this.sprite3D,
     this.sprite3DShiny,
     this.animatedSprite2D,
@@ -58,8 +58,8 @@ class PokemonImage {
   factory PokemonImage.fromJson(Map<String, dynamic> json) {
     String? artwork = json['other']['official-artwork']['front_default'];
     String? artworkShiny = json['other']['official-artwork']['front_shiny'];
-    String sprite2D = json['front_default'];
-    String sprite2DShiny = json['front_shiny'];
+    String? sprite2D = json['front_default'];
+    String? sprite2DShiny = json['front_shiny'];
     String? sprite3D = json['other']['home']['front_default'];
     String? sprite3DShiny = json['other']['home']['front_shiny'];
     String? animatedSprite2D = json['versions']['generation-v']['black-white']['animated']['front_default'];
@@ -101,8 +101,8 @@ class PokemonImage {
     return PokemonImage(
       artwork: null,
       artworkShiny: null,
-      sprite2D: defaultFormImages.sprite2D.replaceFirst('.png', '-$formName.png'),
-      sprite2DShiny: defaultFormImages.sprite2DShiny.replaceFirst('.png', '-$formName.png'),
+      sprite2D: defaultFormImages.sprite2D?.replaceFirst('.png', '-$formName.png'),
+      sprite2DShiny: defaultFormImages.sprite2DShiny?.replaceFirst('.png', '-$formName.png'),
       sprite3D: defaultFormImages.sprite3D?.replaceFirst('.png', '-$formName.png'),
       sprite3DShiny: defaultFormImages.sprite3DShiny?.replaceFirst('.png', '-$formName.png'),
       animatedSprite2D: defaultFormImages.animatedSprite2D?.replaceFirst('.gif', '-$formName.gif'),
@@ -114,27 +114,25 @@ class PokemonImage {
 
 
   String getImageUrl(PokemonImageType type) {
-    switch (type) {
-      case PokemonImageType.artwork:
-        return artwork != null ? artwork! : sprite2D;
-      case PokemonImageType.artworkShiny:
-        return artworkShiny != null ? artworkShiny! : sprite2DShiny;
-      case PokemonImageType.sprite2D:
-        return sprite2D;
-      case PokemonImageType.sprite2DShiny:
-        return sprite2DShiny;
-      case PokemonImageType.sprite3D:
-        return sprite3D != null ? sprite3D! : sprite2D;
-      case PokemonImageType.sprite3DShiny:
-        return sprite3DShiny != null ? sprite3DShiny! : sprite2DShiny;
-      case PokemonImageType.animatedSprite2D:
-        return animatedSprite2D != null ? animatedSprite2D! : sprite2D;
-      case PokemonImageType.animatedSprite2DShiny:
-        return animatedSprite2DShiny != null ? animatedSprite2DShiny! : sprite2DShiny;
-      case PokemonImageType.animatedSprite3D:
-        return animatedSprite3D != null ? animatedSprite3D! : sprite3D != null ? sprite3D! : sprite2D;
-      case PokemonImageType.animatedSprite3DShiny:
-        return animatedSprite3DShiny != null ? animatedSprite3DShiny! : sprite3DShiny != null ? sprite3DShiny! : sprite2DShiny;
+    final Map<PokemonImageType, List<String?>> priority = {
+      PokemonImageType.artwork: [artwork, sprite2D],
+      PokemonImageType.artworkShiny: [artworkShiny, sprite2DShiny, artwork, sprite2D],
+      PokemonImageType.sprite2D: [sprite2D, artwork],
+      PokemonImageType.sprite2DShiny: [sprite2DShiny, artworkShiny, sprite2D, artwork],
+      PokemonImageType.sprite3D: [sprite3D, sprite2D, artwork],
+      PokemonImageType.sprite3DShiny: [sprite3DShiny, sprite2DShiny, artworkShiny, sprite2D, artwork],
+      PokemonImageType.animatedSprite2D: [animatedSprite2D, sprite2D, artwork],
+      PokemonImageType.animatedSprite2DShiny: [animatedSprite2DShiny, sprite2DShiny, artworkShiny, sprite2D, artwork],
+      PokemonImageType.animatedSprite3D: [animatedSprite3D, sprite3D, sprite2D, artwork],
+      PokemonImageType.animatedSprite3DShiny: [animatedSprite3DShiny, sprite3DShiny, animatedSprite2DShiny, sprite2DShiny, artworkShiny, sprite2D, artwork],
+    };
+
+    final candidates = priority[type]!;
+    for (var url in candidates) {
+      if (url != null && url.isNotEmpty) {
+        return url;
+      }
     }
+    return '';
   }
 }
