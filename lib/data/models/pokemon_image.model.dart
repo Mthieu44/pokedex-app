@@ -1,3 +1,5 @@
+final Set<String> _brokenImagesCache = {};
+
 enum PokemonImageType {
   artwork,
   artworkShiny,
@@ -29,20 +31,62 @@ extension PokemonImageTypeShiny on PokemonImageType {
     }
   }
 }
+extension PokemonImageFallbacks on PokemonImage {
+  List<String> getFallbackList(PokemonImageType type) {
+    final Map<PokemonImageType, List<String?>> priority = {
+      PokemonImageType.artwork: [artwork, sprite2D],
+      PokemonImageType.artworkShiny: [artworkShiny, sprite2DShiny, artwork, sprite2D],
+      PokemonImageType.sprite2D: [sprite2D, artwork],
+      PokemonImageType.sprite2DShiny: [sprite2DShiny, artworkShiny, sprite2D, artwork],
+      PokemonImageType.sprite3D: [sprite3D, sprite2D, artwork],
+      PokemonImageType.sprite3DShiny: [sprite3DShiny, sprite2DShiny, artworkShiny, sprite2D, artwork],
+      PokemonImageType.animatedSprite2D: [animatedSprite2D, sprite2D, artwork],
+      PokemonImageType.animatedSprite2DShiny: [animatedSprite2DShiny, sprite2DShiny, artworkShiny, sprite2D, artwork],
+      PokemonImageType.animatedSprite3D: [animatedSprite3D, sprite3D, sprite2D, artwork],
+      PokemonImageType.animatedSprite3DShiny: [animatedSprite3DShiny, sprite3DShiny, animatedSprite2DShiny, sprite2DShiny, artworkShiny, sprite2D, artwork],
+    };
+
+    return priority[type]!.whereType<String>().where((url) => url.isNotEmpty).toList();
+  }
+
+  String getImageUrl(PokemonImageType type) {
+    final list = getFallbackList(type);
+    return list.isNotEmpty ? list.first : '';
+  }
+}
+extension PokemonImageMaintenance on PokemonImage {
+  void removeInvalidUrl(String url) {
+    _brokenImagesCache.add(url);
+    print(_brokenImagesCache);
+
+    if (artwork == url) artwork = null;
+    if (artworkShiny == url) artworkShiny = null;
+    if (sprite2D == url) sprite2D = null;
+    if (sprite2DShiny == url) sprite2DShiny = null;
+    if (sprite3D == url) sprite3D = null;
+    if (sprite3DShiny == url) sprite3DShiny = null;
+    if (animatedSprite2D == url) animatedSprite2D = null;
+    if (animatedSprite2DShiny == url) animatedSprite2DShiny = null;
+    if (animatedSprite3D == url) animatedSprite3D = null;
+    if (animatedSprite3DShiny == url) animatedSprite3DShiny = null;
+  }
+
+  bool isUrlBroken(String? url) => url == null || _brokenImagesCache.contains(url);
+}
 
 class PokemonImage {
-  final String? artwork;
-  final String? artworkShiny;
-  final String? sprite2D;
-  final String? sprite2DShiny;
-  final String? sprite3D;
-  final String? sprite3DShiny;
-  final String? animatedSprite2D;
-  final String? animatedSprite2DShiny;
-  final String? animatedSprite3D;
-  final String? animatedSprite3DShiny;
+  String? artwork;
+  String? artworkShiny;
+  String? sprite2D;
+  String? sprite2DShiny;
+  String? sprite3D;
+  String? sprite3DShiny;
+  String? animatedSprite2D;
+  String? animatedSprite2DShiny;
+  String? animatedSprite3D;
+  String? animatedSprite3DShiny;
 
-  const PokemonImage({
+  PokemonImage({
     this.artwork,
     this.artworkShiny,
     this.sprite2D,
@@ -81,58 +125,27 @@ class PokemonImage {
     );
   }
 
-  factory PokemonImage.fromId(int id) {
-    final apiurl = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon";
-    return PokemonImage(
-      artwork: "$apiurl/other/official-artwork/$id.png", // toujours disponible sauf formes
-      artworkShiny: "$apiurl/other/official-artwork/shiny/$id.png", // toujours disponible sauf formes
-      sprite2D: "$apiurl/$id.png", // toujours disponible // forme = /$id-<forme_name>.png
-      sprite2DShiny: "$apiurl/shiny/$id.png", // toujours disponible // forme = /shiny/$id-<forme_name>.png
-      sprite3D: "$apiurl/other/home/$id.png", // toujours disponible sauf formes // forme = /other/home/$id-<forme_name>.png
-      sprite3DShiny: "$apiurl/other/home/shiny/$id.png", // toujours disponible sauf formes // forme = /other/home/shiny/$id-<forme_name>.png
-      animatedSprite2D: "$apiurl/versions/generation-v/black-white/animated/$id.gif",
-      animatedSprite2DShiny: "$apiurl/versions/generation-v/black-white/animated/shiny/$id.gif",
-      animatedSprite3D: "$apiurl/other/showdown/$id.gif", // forme = /other/showdown/$id-<forme_name>.gif
-      animatedSprite3DShiny: "$apiurl/other/showdown/shiny/$id.gif", // forme = /other/showdown/shiny/$id-<forme_name>.gif
-    );
-  }
-
-  factory PokemonImage.formFromDefaultForm(PokemonImage defaultFormImages, String formName) {
+  factory PokemonImage.formFromDefaultForm(PokemonImage defaultFormImages,
+      String formName) {
     return PokemonImage(
       artwork: null,
       artworkShiny: null,
-      sprite2D: defaultFormImages.sprite2D?.replaceFirst('.png', '-$formName.png'),
-      sprite2DShiny: defaultFormImages.sprite2DShiny?.replaceFirst('.png', '-$formName.png'),
-      sprite3D: defaultFormImages.sprite3D?.replaceFirst('.png', '-$formName.png'),
-      sprite3DShiny: defaultFormImages.sprite3DShiny?.replaceFirst('.png', '-$formName.png'),
-      animatedSprite2D: defaultFormImages.animatedSprite2D?.replaceFirst('.gif', '-$formName.gif'),
-      animatedSprite2DShiny: defaultFormImages.animatedSprite2DShiny?.replaceFirst('.gif', '-$formName.gif'),
-      animatedSprite3D: defaultFormImages.animatedSprite3D?.replaceFirst('.gif', '-$formName.gif'),
-      animatedSprite3DShiny: defaultFormImages.animatedSprite3DShiny?.replaceFirst('.gif', '-$formName.gif'),
+      sprite2D: defaultFormImages.sprite2D?.replaceFirst(
+          '.png', '-$formName.png'),
+      sprite2DShiny: defaultFormImages.sprite2DShiny?.replaceFirst(
+          '.png', '-$formName.png'),
+      sprite3D: defaultFormImages.sprite3D?.replaceFirst(
+          '.png', '-$formName.png'),
+      sprite3DShiny: defaultFormImages.sprite3DShiny?.replaceFirst(
+          '.png', '-$formName.png'),
+      animatedSprite2D: defaultFormImages.animatedSprite2D?.replaceFirst(
+          '.gif', '-$formName.gif'),
+      animatedSprite2DShiny: defaultFormImages.animatedSprite2DShiny
+          ?.replaceFirst('.gif', '-$formName.gif'),
+      animatedSprite3D: defaultFormImages.animatedSprite3D?.replaceFirst(
+          '.gif', '-$formName.gif'),
+      animatedSprite3DShiny: defaultFormImages.animatedSprite3DShiny
+          ?.replaceFirst('.gif', '-$formName.gif'),
     );
-  }
-
-
-  String getImageUrl(PokemonImageType type) {
-    final Map<PokemonImageType, List<String?>> priority = {
-      PokemonImageType.artwork: [artwork, sprite2D],
-      PokemonImageType.artworkShiny: [artworkShiny, sprite2DShiny, artwork, sprite2D],
-      PokemonImageType.sprite2D: [sprite2D, artwork],
-      PokemonImageType.sprite2DShiny: [sprite2DShiny, artworkShiny, sprite2D, artwork],
-      PokemonImageType.sprite3D: [sprite3D, sprite2D, artwork],
-      PokemonImageType.sprite3DShiny: [sprite3DShiny, sprite2DShiny, artworkShiny, sprite2D, artwork],
-      PokemonImageType.animatedSprite2D: [animatedSprite2D, sprite2D, artwork],
-      PokemonImageType.animatedSprite2DShiny: [animatedSprite2DShiny, sprite2DShiny, artworkShiny, sprite2D, artwork],
-      PokemonImageType.animatedSprite3D: [animatedSprite3D, sprite3D, sprite2D, artwork],
-      PokemonImageType.animatedSprite3DShiny: [animatedSprite3DShiny, sprite3DShiny, animatedSprite2DShiny, sprite2DShiny, artworkShiny, sprite2D, artwork],
-    };
-
-    final candidates = priority[type]!;
-    for (var url in candidates) {
-      if (url != null && url.isNotEmpty) {
-        return url;
-      }
-    }
-    return '';
   }
 }

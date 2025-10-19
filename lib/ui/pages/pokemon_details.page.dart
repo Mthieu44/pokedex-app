@@ -30,7 +30,7 @@ class _PokemonDetailsPageState extends State<PokemonDetailsPage> {
   PokemonService pokemonService = PokemonService.instance;
   bool isShiny = false;
   bool isFavorite = false;
-  PokemonImageType imageType = PokemonImageType.animatedSprite3D;
+  PokemonImageType imageType = PokemonImageType.sprite3D;
   late int currentVariantIndex;
   late int currentFormIndex;
   Pokemon get currentVariant => widget.pokemonSpecies.variants[currentVariantIndex];
@@ -233,32 +233,43 @@ class _PokemonDetailsPageState extends State<PokemonDetailsPage> {
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Row(
-                        spacing: 4,
-                        children: [
-                          Text(
-                            (widget.pokemonSpecies.variants.length > 1 &&
-                              currentVariant.forms.length == 1 &&
-                              currentForm.formName != "") ?
-                              currentForm.name : currentVariant.name,
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-
-                          if (currentVariant.forms.length > 1) ...[
-                            Text(
-                              currentForm.displayFormName,
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontStyle: FontStyle.italic,
-                                color: Colors.grey,
+                      Flexible(
+                        child: Row(
+                          spacing: 4,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                (widget.pokemonSpecies.variants.length > 1 &&
+                                  currentVariant.forms.length == 1 &&
+                                  currentForm.formName != "") ?
+                                  currentForm.name : currentVariant.name,
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                softWrap: true,
+                                overflow: TextOverflow.visible
                               ),
-                            )
-                          ]
-                        ],
+                            ),
+
+                            if (currentVariant.forms.length > 1) ...[
+                              Flexible(
+                                child: Text(
+                                  currentForm.displayFormName,
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontStyle: FontStyle.italic,
+                                    color: Colors.grey,
+                                  ),
+                                  softWrap: true,
+                                  overflow: TextOverflow.visible
+                                ),
+                              )
+                            ]
+                          ],
+                        ),
                       ),
                       Text(
                         "#${widget.pokemonSpecies.id}",

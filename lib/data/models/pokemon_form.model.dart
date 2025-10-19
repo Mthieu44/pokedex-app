@@ -14,7 +14,7 @@ class PokemonForm {
     required this.name,
     required this.formName,
     required this.displayFormName,
-    this.images = const PokemonImage(sprite2D: '', sprite2DShiny: ''),
+    required this.images,
     required this.parentPokemon,
   });
 
