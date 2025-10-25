@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:pokedex_app/data/providers/pokemon.provider.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:pokedex_app/logic/cubit/home.cubit.dart';
 import 'package:pokedex_app/ui/widgets/action_menu.widget.dart';
 import 'package:pokedex_app/ui/widgets/pokemon_card.widget.dart';
-import 'package:provider/provider.dart';
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
@@ -20,17 +20,15 @@ class _MyHomePageState extends State<MyHomePage> with AutomaticKeepAliveClientMi
   @override
   void initState() {
     super.initState();
-    final provider = Provider.of<PokemonProvider>(context, listen: false);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      provider.loadInitial();
-    });
-    _scrollController.addListener(() {
-      if (provider.hasMore &&
-          _scrollController.position.pixels >=
-          _scrollController.position.maxScrollExtent - 300) {
-            provider.loadMore();
-          }
-    });
+    _scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    final cubit = context.read<HomeCubit>();
+    if (cubit.state.hasMore &&
+        _scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+          cubit.loadMore();
+        }
   }
 
   @override
@@ -45,25 +43,24 @@ class _MyHomePageState extends State<MyHomePage> with AutomaticKeepAliveClientMi
     super.build(context);
     return Scaffold(
       floatingActionButton: ActionMenuWidget(),
-      body: Consumer<PokemonProvider>(
-        builder: (context, provider, child) {
-          if (provider.isLoading && provider.speciesList.isEmpty) {
+      body: BlocBuilder<HomeCubit, HomeState>(
+        builder: (context, state) {
+          if (state.isLoading && state.speciesList.isEmpty) {
             return Center(child: CircularProgressIndicator());
-          } else if (provider.speciesList.isEmpty) {
+          } else if (state.speciesList.isEmpty) {
             return Center(child: Text("No Pokémon found."));
           }
-          if (provider.hasError) {
+          if (state.hasError) {
             return Center(
               child: Text("An error occurred while loading Pokémon."),
             );
           }
 
-          final speciesList = provider.speciesList;
+          final speciesList = state.speciesList;
 
           return RefreshIndicator(
             onRefresh: () async {
-              provider.reset();
-              await provider.loadInitial();
+              await context.read<HomeCubit>().reset();
             },
             child: GridView.builder(
               controller: _scrollController,
@@ -78,7 +75,7 @@ class _MyHomePageState extends State<MyHomePage> with AutomaticKeepAliveClientMi
                 mainAxisSpacing: 6,
                 childAspectRatio: 1.4,
               ),
-              itemCount: speciesList.length + (provider.hasMore ? 1 : 0),
+              itemCount: speciesList.length + (state.hasMore ? 1 : 0),
               itemBuilder: (context, index) {
                 if (index < speciesList.length) {
                   final species = speciesList[index];

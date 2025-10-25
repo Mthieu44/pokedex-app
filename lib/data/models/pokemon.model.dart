@@ -96,7 +96,7 @@ class Pokemon {
 
   PokemonForm? getFormByName(String formName) {
     for (var form in forms) {
-      if (form.name.toLowerCase() == formName.toLowerCase()) {
+      if (form.formName.toLowerCase() == formName.toLowerCase()) {
         return form;
       }
     }

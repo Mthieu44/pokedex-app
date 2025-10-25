@@ -4,11 +4,15 @@ import 'package:pokedex_app/data/models/pokemon.model.dart';
 import 'package:pokedex_app/data/models/pokemon_form.model.dart';
 import 'package:pokedex_app/data/models/pokemon_image.model.dart';
 import 'package:pokedex_app/data/models/pokemon_species.model.dart';
+import 'package:pokedex_app/logic/cubit/pokemon_list.cubit.dart';
+import 'package:pokedex_app/ui/builders/pokemon_list.builder.dart';
 import 'package:pokedex_app/ui/theme/type_colors.theme.dart';
 import 'package:pokedex_app/ui/widgets/pokemon_image_bubble.widget.dart';
 import 'package:pokedex_app/ui/widgets/pokemon_stat.widget.dart';
 import 'package:pokedex_app/ui/widgets/pokemon_type_bubble.widget.dart';
 import 'package:pokedex_app/ui/widgets/type_effectiveness.widget.dart';
+
+import '../../logic/cubit/pokemon_item.cubit.dart';
 
 class PokemonDetailsPage extends StatefulWidget {
   const PokemonDetailsPage({
@@ -30,38 +34,35 @@ class _PokemonDetailsPageState extends State<PokemonDetailsPage> {
   PokemonService pokemonService = PokemonService.instance;
   bool isShiny = false;
   bool isFavorite = false;
-  PokemonImageType imageType = PokemonImageType.sprite3D;
+  PokemonImageType imageType = PokemonImageType.animatedSprite3D;
   late int currentVariantIndex;
   late int currentFormIndex;
   Pokemon get currentVariant => widget.pokemonSpecies.variants[currentVariantIndex];
   PokemonForm get currentForm => currentVariant.forms[currentFormIndex];
 
-  Future<void> _fetchVariants() async {
-    await pokemonService.fetchAllVariantsForSpecies(widget.pokemonSpecies);
-    if (!mounted) return;
-    setState(() {});
-  }
-
-  Future<void> _fetchForms() async {
-    await pokemonService.fetchAllFormsForPokemon(currentVariant);
-    if (!mounted) return;
-    setState(() {});
-  }
+  late final PokemonListCubit<PokemonSpecies> evolutionsCubit;
+  late final PokemonListCubit<Pokemon> variantsCubit;
+  late final PokemonItemCubit<PokemonSpecies> preEvolutionCubit;
 
   @override
   void initState() {
     super.initState();
     currentVariantIndex = widget.initialVariantIndex;
     currentFormIndex = widget.initialFormIndex;
-    _fetchVariants();
-    _fetchForms();
+
+    evolutionsCubit = PokemonListCubit(fetchFunction: () async => await pokemonService.fetchEvolutionsForSpecies(widget.pokemonSpecies));
+    variantsCubit = PokemonListCubit(fetchFunction: () async => await pokemonService.fetchAllVariantsForSpecies(widget.pokemonSpecies));
+    preEvolutionCubit = PokemonItemCubit(fetchFunction: () async => await pokemonService.fetchPreEvolutionForSpecies(widget.pokemonSpecies));
+    evolutionsCubit.load();
+    variantsCubit.load();
+    preEvolutionCubit.load();
+
   }
   void _setVariant(int index) {
     setState(() {
       currentVariantIndex = index;
       currentFormIndex = 0;
     });
-    _fetchForms();
   }
 
   String _lastSwipeDirection = "";
@@ -290,13 +291,122 @@ class _PokemonDetailsPageState extends State<PokemonDetailsPage> {
                       ],
                     ],
                   ), // types
-                  SizedBox(height: 16),
+                  SizedBox(height: 8),
+                  Text(
+                    "Evolutions",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ), // evolutions title
+                  PokemonAsyncBuilder<PokemonSpecies>(
+                    cubit: evolutionsCubit,
+                    builder: (list) {
+                      return SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          spacing: 4,
+                          children: list.map((evo) {
+                            final (pokemon, pokemonForm) = evo.getByFormName(currentForm.formName);
+                            final evoVariantIndex = evo.variants.indexWhere((v) => v.id == pokemon.id);
+                            final evoFormIndex = pokemon.forms.indexWhere((f) => f.id == pokemonForm.id);
+                            return GestureDetector(
+                              onTap: () {
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => PokemonDetailsPage(
+                                      pokemonSpecies: evo,
+                                      initialVariantIndex: evoVariantIndex,
+                                      initialFormIndex: evoFormIndex,
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: PokemonImageBubble(
+                                pokemonImage: pokemonForm.images,
+                                size: 75,
+                                type: imageType,
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      );
+                    },
+                  ),// evolutions
+                  Text(
+                    "Pre-Evolution",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ), // pre-evolution title
+                  PokemonAsyncBuilder<PokemonSpecies>(
+                    cubit: preEvolutionCubit,
+                    builder: (list) {
+                      final preEvo = list.first;
+                      final (pokemon, pokemonForm) = preEvo.getByFormName(currentForm.formName);
+                      final preEvoVariantIndex = preEvo.variants.indexWhere((v) => v.id == pokemon.id);
+                      final preEvoFormIndex = pokemon.forms.indexWhere((f) => f.id == pokemonForm.id);
+                      return GestureDetector(
+                        onTap: () {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => PokemonDetailsPage(
+                                pokemonSpecies: preEvo,
+                                initialVariantIndex: preEvoVariantIndex,
+                                initialFormIndex: preEvoFormIndex,
+                              ),
+                            ),
+                          );
+                        },
+                        child: PokemonImageBubble(
+                          pokemonImage: preEvo.getByFormName(currentForm.formName).$2.images,
+                          size: 75,
+                          type: imageType,
+                        ),
+                      );
+                    },
+                  ), // pre-evolution
+                  Text(
+                    "Variants",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ), // variants title
+                  PokemonAsyncBuilder<Pokemon>(
+                    cubit: variantsCubit,
+                    builder: (list) {
+                      return SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: list.map((variant) {
+                            final isCurrent = variant.id == currentVariant.id;
+                            return GestureDetector(
+                              onTap: isCurrent ? null : () => _setVariant(widget.pokemonSpecies.variants.indexOf(variant)),
+                              child: Opacity(
+                                opacity: isCurrent ? 0.4 : 1.0,
+                                child: PokemonImageBubble(
+                                  pokemonImage: variant.images,
+                                  size: 75,
+                                  type: imageType,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      );
+                    },
+                  ), // variants
+                  SizedBox(height: 8),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
                       "Base Stats",
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                       Text(
                       "Total: ${currentVariant.stats.total}",
@@ -336,7 +446,7 @@ class _PokemonDetailsPageState extends State<PokemonDetailsPage> {
                   SizedBox(height: 16),
                   Text(
                     "Type Effectiveness",
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ), // type effectiveness title
                   SizedBox(height: 8),
                   Wrap(
@@ -364,76 +474,6 @@ class _PokemonDetailsPageState extends State<PokemonDetailsPage> {
                       .map((e) => TypeEffectivenessWidget(type: e.key, effectiveness: e.value))
                       .toList()
                   ), // immun
-                  if (widget.pokemonSpecies.evolutions.isNotEmpty) ...[
-                    SizedBox(height: 16),
-                    Text(
-                      "Evolutions",
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        spacing: 4,
-                        children: [
-                          for (var evo in widget.pokemonSpecies.evolutions) ...[
-                            PokemonImageBubble(
-                              pokemonImage: evo.getByFormName(currentForm.name).$2.images,
-                              size: 75,
-                              type: imageType,
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ], // evolutions
-                  if (widget.pokemonSpecies.preEvolution != null) ...[
-                    SizedBox(height: 16),
-                    Text(
-                      "Pre-Evolution",
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    PokemonImageBubble(
-                      pokemonImage: widget.pokemonSpecies.preEvolution!.getByFormName(currentForm.name).$2.images,
-                      size: 75,
-                      type: imageType,
-                    ),
-                  ], // pre-evolution
-                  if (widget.pokemonSpecies.variants.length > 1) ...[
-                    SizedBox(height: 16),
-                    Text(
-                      "Variants",
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          for (var variant in widget.pokemonSpecies.variants)
-                            if (variant != currentVariant)
-                              GestureDetector(
-                                onTap: () => _setVariant(widget.pokemonSpecies.variants.indexOf(variant)),
-                                child: PokemonImageBubble(
-                                  pokemonImage: variant.images,
-                                  size: 75,
-                                  type: imageType,
-                                ),
-                              ),
-                        ],
-                      ),
-                    ),
-                  ], // variants
                 ],
               ),
             ),
