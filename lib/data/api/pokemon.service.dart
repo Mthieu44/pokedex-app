@@ -1,9 +1,9 @@
 import 'dart:convert';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:pokedex_app/data/models/pokemon.model.dart';
 import 'package:pokedex_app/data/models/pokemon_evolution_chain.model.dart';
 import 'package:pokedex_app/data/models/pokemon_species.model.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/pokemon_form.model.dart';
 
@@ -14,40 +14,28 @@ class PokemonService {
   final String baseUrl = 'https://pokeapi.co/api/v2';
   final http.Client client = http.Client();
 
-  double timeDiffMilli(DateTime start, DateTime end) {
-    return end.difference(start).inMilliseconds.toDouble();
+  Box<String>? _cacheBox;
+  Future<void> _initCacheBox() async {
+    _cacheBox ??= await Hive.openBox<String>('pokemon_cache');
   }
 
   Future<Map<String, dynamic>> getDataCached(String key, String url) async {
-    print("====== START FETCHING $key ======");
-    final startTime = DateTime.now();
-    final prefs = await SharedPreferences.getInstance();
-    print('time to get prefs: ${timeDiffMilli(startTime, DateTime.now())} ms');
-    final cachedData = prefs.getString(key);
-    print('time to get cached data: ${timeDiffMilli(startTime, DateTime.now())} ms');
-    Map<String, dynamic> json;
+    await _initCacheBox();
 
+    final cachedData = _cacheBox!.get(key);
     if (cachedData != null) {
-      json = jsonDecode(cachedData);
-      print('time to decode cached data: ${timeDiffMilli(startTime, DateTime.now())} ms');
-      print('===== END FETCHING $key FROM CACHE =====');
-      return json;
+      return jsonDecode(cachedData);
     }
+
     final response = await client.get(
       Uri.parse(url),
     );
-    print('time to fetch data from API: ${timeDiffMilli(startTime, DateTime.now())} ms');
-
     if (response.statusCode != 200) {
       throw Exception('Failed to load data from $url');
     }
 
-    json = jsonDecode(response.body);
-    print('time to decode API data: ${timeDiffMilli(startTime, DateTime.now())} ms');
-    await prefs.setString(key, response.body);
-    print('time to cache data: ${timeDiffMilli(startTime, DateTime.now())} ms');
-    print('===== END FETCHING $key FROM API =====');
-    return json;
+    _cacheBox!.put(key, response.body);
+    return jsonDecode(response.body);
   }
 
   Future<PokemonSpecies> fetchSpeciesAndDefaultVariant(int id) async {
@@ -61,7 +49,7 @@ class PokemonService {
     final pokemonJson = await getDataCached('pokemon_$id', variantUrl);
     final pokemon = Pokemon.fromJson(pokemonJson, species);
 
-    await fetchDefaultFormForPokemon(pokemon);
+    await fetchAllFormsForPokemon(pokemon);
 
     if (!species.variants.any((v) => v.id == pokemon.id)) {
       species.variants.add(pokemon);

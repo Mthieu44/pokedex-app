@@ -1,6 +1,5 @@
 import 'package:pokedex_app/data/models/pokemon.model.dart';
 import 'package:pokedex_app/data/models/pokemon_form.model.dart';
-import 'package:pokedex_app/data/models/pokemon_image.model.dart';
 
 class PokemonSpecies {
   final int id;

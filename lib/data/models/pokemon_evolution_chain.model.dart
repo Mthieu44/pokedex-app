@@ -1,6 +1,3 @@
-import 'package:pokedex_app/data/api/pokemon.service.dart';
-import 'package:pokedex_app/data/models/pokemon_species.model.dart';
-
 class PokemonEvolutionChain {
   final int id;
   final List<List<String>> evolutions;

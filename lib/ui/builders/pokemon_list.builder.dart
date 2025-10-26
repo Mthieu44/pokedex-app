@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pokedex_app/logic/cubit/pokemon_list.cubit.dart';
-import 'package:pokedex_app/ui/skeletons/circle.skeleton.dart';
 import 'package:pokedex_app/ui/skeletons/list.skeleton.dart';
 import 'package:pokedex_app/ui/skeletons/pokemon_image.skeleton.dart';
 import 'package:pokedex_app/ui/widgets/empty_list.widget.dart';

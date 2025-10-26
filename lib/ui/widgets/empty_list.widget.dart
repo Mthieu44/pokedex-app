@@ -17,7 +17,7 @@ class EmptyListWidget extends StatelessWidget {
         child: Image.asset(
           imagePath,
           fit: BoxFit.contain,
-          color: Colors.grey.shade500,
+          color: Colors.grey.shade600,
         ),
       )
     );

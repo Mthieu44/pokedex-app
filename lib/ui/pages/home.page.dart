@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pokedex_app/logic/cubit/home.cubit.dart';
+import 'package:pokedex_app/ui/skeletons/pokemon_card.skeleton.dart';
+import 'package:pokedex_app/ui/skeletons/pokemon_image.skeleton.dart';
 import 'package:pokedex_app/ui/widgets/action_menu.widget.dart';
 import 'package:pokedex_app/ui/widgets/pokemon_card.widget.dart';
 
@@ -37,6 +39,15 @@ class _MyHomePageState extends State<MyHomePage> with AutomaticKeepAliveClientMi
     super.dispose();
   }
 
+  int _getItemCount(HomeState state) {
+    if (state.isLoading && state.speciesList.isEmpty) {
+      return 20;
+    } else if (state.hasMore) {
+      return state.speciesList.length + 2;
+    } else {
+      return state.speciesList.length;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,37 +56,21 @@ class _MyHomePageState extends State<MyHomePage> with AutomaticKeepAliveClientMi
       floatingActionButton: ActionMenuWidget(),
       body: BlocBuilder<HomeCubit, HomeState>(
         builder: (context, state) {
-          if (state.isLoading && state.speciesList.isEmpty) {
-            return Center(child: CircularProgressIndicator());
-          } else if (state.speciesList.isEmpty) {
-            return Center(child: Text("No Pokémon found."));
-          }
-          if (state.hasError) {
-            return Center(
-              child: Text("An error occurred while loading Pokémon."),
-            );
-          }
-
           final speciesList = state.speciesList;
 
           return RefreshIndicator(
-            onRefresh: () async {
-              await context.read<HomeCubit>().reset();
-            },
+            onRefresh: () async => context.read<HomeCubit>().reset(),
             child: GridView.builder(
               controller: _scrollController,
-              padding: EdgeInsets.all(3),
-              physics: AlwaysScrollableScrollPhysics(),
-              addAutomaticKeepAlives: false,
-              addRepaintBoundaries: true,
-              addSemanticIndexes: false,
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              padding: const EdgeInsets.all(3.0),
+              physics: const AlwaysScrollableScrollPhysics(),
+              itemCount: _getItemCount(state),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
-                crossAxisSpacing: 6,
-                mainAxisSpacing: 6,
                 childAspectRatio: 1.4,
+                mainAxisSpacing: 6,
+                crossAxisSpacing: 6,
               ),
-              itemCount: speciesList.length + (state.hasMore ? 1 : 0),
               itemBuilder: (context, index) {
                 if (index < speciesList.length) {
                   final species = speciesList[index];
@@ -83,11 +78,11 @@ class _MyHomePageState extends State<MyHomePage> with AutomaticKeepAliveClientMi
                     key: ValueKey(species.id),
                     pokemonSpecies: species
                   );
-                } else {
-                  return Center(child: CircularProgressIndicator());
                 }
+
+                return const PokemonCardSkeleton();
               },
-            )
+            ),
           );
         },
       )

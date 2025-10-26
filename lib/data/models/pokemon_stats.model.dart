@@ -1,5 +1,3 @@
-import 'dart:math';
-
 class PokemonStats{
   const PokemonStats({
     required this.hp,
