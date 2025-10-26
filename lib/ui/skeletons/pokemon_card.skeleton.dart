@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:pokedex_app/ui/skeletons/pokemon_image.skeleton.dart';
 import 'package:shimmer/shimmer.dart';
 
 class PokemonCardSkeleton extends StatelessWidget {

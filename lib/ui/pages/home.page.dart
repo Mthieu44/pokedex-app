@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pokedex_app/logic/cubit/home.cubit.dart';
 import 'package:pokedex_app/ui/skeletons/pokemon_card.skeleton.dart';
-import 'package:pokedex_app/ui/skeletons/pokemon_image.skeleton.dart';
 import 'package:pokedex_app/ui/widgets/action_menu.widget.dart';
 import 'package:pokedex_app/ui/widgets/pokemon_card.widget.dart';
 

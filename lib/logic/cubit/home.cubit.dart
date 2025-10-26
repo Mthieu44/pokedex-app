@@ -32,7 +32,7 @@ class HomeState {
 
 class HomeCubit extends Cubit<HomeState> {
   final _service = PokemonService.instance;
-  final int _limit = 20;
+  final int _limit = 10000;
   int _offset = 0;
 
   HomeCubit() : super(HomeState(speciesList: []));

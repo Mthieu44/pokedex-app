@@ -152,7 +152,6 @@ class PokemonService {
       try {
         await fetchAllFormsForPokemon(pokemon);
       } catch (e) {
-        print('Error fetching forms for Pokémon ID: ${pokemon.id}, Error: $e');
         continue;
       }
       species.variants.add(pokemon);

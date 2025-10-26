@@ -1,5 +1,3 @@
-final Set<String> _brokenImagesCache = {};
-
 enum PokemonImageType {
   artwork,
   artworkShiny,
@@ -31,6 +29,7 @@ extension PokemonImageTypeShiny on PokemonImageType {
     }
   }
 }
+
 extension PokemonImageFallbacks on PokemonImage {
   List<String> getFallbackList(PokemonImageType type) {
     final Map<PokemonImageType, List<String?>> priority = {
@@ -53,25 +52,6 @@ extension PokemonImageFallbacks on PokemonImage {
     final list = getFallbackList(type);
     return list.isNotEmpty ? list.first : '';
   }
-}
-extension PokemonImageMaintenance on PokemonImage {
-  void removeInvalidUrl(String url) {
-    _brokenImagesCache.add(url);
-    print(_brokenImagesCache);
-
-    if (artwork == url) artwork = null;
-    if (artworkShiny == url) artworkShiny = null;
-    if (sprite2D == url) sprite2D = null;
-    if (sprite2DShiny == url) sprite2DShiny = null;
-    if (sprite3D == url) sprite3D = null;
-    if (sprite3DShiny == url) sprite3DShiny = null;
-    if (animatedSprite2D == url) animatedSprite2D = null;
-    if (animatedSprite2DShiny == url) animatedSprite2DShiny = null;
-    if (animatedSprite3D == url) animatedSprite3D = null;
-    if (animatedSprite3DShiny == url) animatedSprite3DShiny = null;
-  }
-
-  bool isUrlBroken(String? url) => url == null || _brokenImagesCache.contains(url);
 }
 
 class PokemonImage {
